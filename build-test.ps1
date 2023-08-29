@@ -10,9 +10,9 @@ param(
 	[string]$BuildPath,
 	
 	[Parameter(mandatory=$true)]
-	[string]$SourcePath
+	[string]$SourcePath,
 	
-	[Parameter]
+	[Parameter()]
 	[switch]$WIMOnly		=	[bool]0
 )
 #$BuildPath = 'C:\Users\tomo\Desktop\\build-test'
@@ -34,6 +34,7 @@ $Packages = @(
 	'WinPE-SecureBootCmdlets'
 	'WinPE-StorageWMI'
 )
+pause
 clear
 Write-Host 'Mounting Image..' -foregroundcolor cyan -nonewline
 $p = Start-Process -PassThru -NoNewWindow -FilePath 'dism.exe' -ArgumentList @('/Mount-Wim',"/mountdir:`"${MountDir}`"","/WimFile:`"${BuildPath}\media\sources\boot.wim`"",'/index:1')
@@ -82,9 +83,29 @@ if ($Architecture -eq 'AMD64')
 }
 
 clear
+Write-Host 'Cleaning Up WinPE Image..' -foregroundcolor cyan -nonewline
+$p = Start-Process -PassThru -NoNewWindow -FilePath 'dism.exe' -ArgumentList @("/image:`"${MountDir}`"", '/cleanup-image', '/startcomponentcleanup')
+$p.WaitForExit()
+
+clear
 Write-Host 'Unmounting WinPE Image..' -foregroundcolor cyan -nonewline
 $p = Start-Process -PassThru -NoNewWindow -FilePath 'dism.exe' -ArgumentList @('/Unmount-Wim',"/mountdir:`"${MountDir}`"",'/commit')
 $p.WaitForExit()
+
+clear
+Write-Host 'Optimizing WinPE Image..' -foregroundcolor cyan
+$p = Start-Process -PassThru -NoNewWindow -FilePath (Join-Path (Join-Path $PSScriptRoot 'Tools') 'wimlib-imagex.exe') -ArgumentList @('optimize', "`"${BuildPath}\media\sources\boot.wim`"", '--recompress')
+$p.WaitForExit()
+pause
+
+if (!$WIMOnly)
+{
+	clear
+	Write-Host "Generating ISO.." -foregroundcolor cyan
+	$DateTime = ([System.DateTime]::UtcNow).ToString('yyyy-MM-dd_hhmm.ss')
+	$ISOPath = Join-Path $BuildPath "WinPE_${DateTime}.iso"
+	.\Create-PE-ISO.ps1 -BuildPath $BuildPath -Architecture $Architecture -SavePath $ISOPath
+}
 
 clear
 Write-Host 'WIM Build Completed!' -foregroundcolor green

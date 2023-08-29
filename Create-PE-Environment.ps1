@@ -9,7 +9,7 @@ param(
 	[Parameter()]
 	[switch]$Rebuild		=	$false
 )
-$PESourcesDir = Join-Path $env:PROGRAMFILES(X86) '\Windows Kits\10\Assessment and Deployment Kit'
+$PESourcesDir = Join-Path ${env:PROGRAMFILES(X86)} '\Windows Kits\10\Assessment and Deployment Kit'
 
 #dicts to match less shit arch names with the source directories in the kit
 $ArchDictPESource = @{
